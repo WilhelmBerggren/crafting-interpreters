@@ -1,0 +1,1 @@
+This is a C# implementation of Municifent's teaching language Lox, from the book Crafting Interpreters.
