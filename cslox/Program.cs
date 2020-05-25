@@ -9,6 +9,19 @@ namespace crafting_interpreters
         private static bool hadError;
         static void Main(string[] args)
         {
+            // var expr = new Expr<string>.Binary(
+            //     new Expr<string>.Unary(
+            //         new Token(TokenType.MINUS, "-", null, 1),
+            //         new Expr<string>.Literal(123)
+            //     ),
+            //     new Token(TokenType.STAR, "*", null, 1),
+            //     new Expr<string>.Grouping(
+            //         new Expr<string>.Literal(45.67)
+            //     )
+            // );
+
+            // Console.WriteLine(new AstPrinter().Print(expr));
+
             if (args.Length > 1)
             {
                 Console.WriteLine("Usage: cslox [script]");
