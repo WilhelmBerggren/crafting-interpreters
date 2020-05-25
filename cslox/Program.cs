@@ -4,7 +4,7 @@ using System.IO;
 
 namespace crafting_interpreters
 {
-    public class Program
+    public class Lox
     {
         private static bool hadError;
         static void Main(string[] args)
@@ -38,9 +38,10 @@ namespace crafting_interpreters
         }
 
 
-        public static void RunText(string source) {
+        public static void RunText(string source)
+        {
             Run(source);
-            if(hadError) Environment.Exit(65);
+            if (hadError) Environment.Exit(65);
         }
         public static void RunFile(string path)
         {
@@ -63,16 +64,29 @@ namespace crafting_interpreters
         {
             var scanner = new Scanner(source);
             List<Token> tokens = scanner.ScanTokens();
+            Parser parser = new Parser(tokens);
+            Expr<string> expr = parser.Parse();
 
-            foreach (var token in tokens)
-            {
-                Console.WriteLine(token);
-            }
+            if(hadError) return;
+
+            Console.WriteLine(new AstPrinter().Print(expr));
         }
 
         public static void Error(int line, string message)
         {
             Report(line, "", message);
+        }
+
+        public static void Error(Token token, string message)
+        {
+            if (token.type == TokenType.EOF)
+            {
+                Report(token.line, " at end", message);
+            }
+            else
+            {
+                Report(token.line, $" at '{token.lexeme}'", message);
+            }
         }
 
         public static void Report(int line, string where, string message)

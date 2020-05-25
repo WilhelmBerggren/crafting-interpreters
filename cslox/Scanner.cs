@@ -91,7 +91,7 @@ namespace crafting_interpreters
                 default:
                     if (IsDigit(c)) Number();
                     else if (IsAlpha(c)) Identifier();
-                    else Program.Error(Line, "Unexpected character.");
+                    else Lox.Error(Line, "Unexpected character.");
                     break;
             }
         }
@@ -156,7 +156,7 @@ namespace crafting_interpreters
             }
             if (isAtEnd())
             {
-                Program.Error(Line, "Unterminated string.");
+                Lox.Error(Line, "Unterminated string.");
                 return;
             }
 
@@ -182,7 +182,7 @@ namespace crafting_interpreters
 
             if (isAtEnd())
             {
-                Program.Error(Line, "Unterminated comment.");
+                Lox.Error(Line, "Unterminated comment.");
                 return;
             }
 
