@@ -14,7 +14,7 @@ namespace crafting_interpreters
             this.Tokens = tokens;
         }
 
-        public Expr<string> Parse()
+        public Expr<object> Parse()
         {
             try
             {
@@ -27,20 +27,20 @@ namespace crafting_interpreters
             }
         }
 
-        private Expr<string> Expression()
+        private Expr<object> Expression()
         {
             return Equality();
         }
 
-        private Expr<string> Equality()
+        private Expr<object> Equality()
         {
-            Expr<string> expr = Comparison();
+            Expr<object> expr = Comparison();
 
             while (Match(new List<TokenType>() { TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL }))
             {
                 Token op = Previous();
-                Expr<string> right = Comparison();
-                expr = new Expr<string>.Binary(expr, op, expr);
+                Expr<object> right = Comparison();
+                expr = new Expr<object>.Binary(expr, op, expr);
             }
 
             return expr;
@@ -118,76 +118,76 @@ namespace crafting_interpreters
             }
         }
 
-        private Expr<string> Comparison()
+        private Expr<object> Comparison()
         {
-            Expr<string> expr = Addition();
+            Expr<object> expr = Addition();
 
             while (Match(new List<TokenType>() { TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LESS, TokenType.LESS_EQUAL }))
             {
                 Token op = Previous();
-                Expr<string> right = Addition();
-                expr = new Expr<string>.Binary(expr, op, right);
+                Expr<object> right = Addition();
+                expr = new Expr<object>.Binary(expr, op, right);
             }
 
             return expr;
         }
 
-        private Expr<string> Addition()
+        private Expr<object> Addition()
         {
-            Expr<string> expr = Multiplication();
+            Expr<object> expr = Multiplication();
 
             while (Match(new List<TokenType>() { TokenType.MINUS, TokenType.PLUS }))
             {
                 Token op = Previous();
-                Expr<string> right = Multiplication();
-                expr = new Expr<string>.Binary(expr, op, right);
+                Expr<object> right = Multiplication();
+                expr = new Expr<object>.Binary(expr, op, right);
             }
 
             return expr;
         }
 
-        private Expr<string> Multiplication()
+        private Expr<object> Multiplication()
         {
-            Expr<string> expr = Unary();
+            Expr<object> expr = Unary();
 
             while (Match(new List<TokenType>() { TokenType.SLASH, TokenType.STAR }))
             {
                 Token op = Previous();
-                Expr<string> right = Unary();
-                expr = new Expr<string>.Binary(expr, op, right);
+                Expr<object> right = Unary();
+                expr = new Expr<object>.Binary(expr, op, right);
             }
 
             return expr;
         }
 
-        private Expr<string> Unary()
+        private Expr<object> Unary()
         {
             if (Match(new List<TokenType>() { TokenType.BANG, TokenType.MINUS }))
             {
                 Token op = Previous();
-                Expr<string> right = Unary();
-                return new Expr<string>.Unary(op, right);
+                Expr<object> right = Unary();
+                return new Expr<object>.Unary(op, right);
             }
 
             return Primary();
         }
 
-        private Expr<string> Primary()
+        private Expr<object> Primary()
         {
-            if (Match(new List<TokenType>() { TokenType.FALSE })) return new Expr<string>.Literal(false);
-            if (Match(new List<TokenType>() { TokenType.TRUE })) return new Expr<string>.Literal(true);
-            if (Match(new List<TokenType>() { TokenType.NIL })) return new Expr<string>.Literal(null);
+            if (Match(new List<TokenType>() { TokenType.FALSE })) return new Expr<object>.Literal(false);
+            if (Match(new List<TokenType>() { TokenType.TRUE })) return new Expr<object>.Literal(true);
+            if (Match(new List<TokenType>() { TokenType.NIL })) return new Expr<object>.Literal(null);
 
             if (Match(new List<TokenType>() { TokenType.NUMBER, TokenType.STRING }))
             {
-                return new Expr<string>.Literal(Previous().literal);
+                return new Expr<object>.Literal(Previous().literal);
             }
 
             if (Match(new List<TokenType>() { TokenType.LEFT_PAREN }))
             {
-                Expr<string> expr = Expression();
+                Expr<object> expr = Expression();
                 Consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.");
-                return new Expr<string>.Grouping(expr);
+                return new Expr<object>.Grouping(expr);
             }
 
             throw Error(Peek(), "Expect expression.");

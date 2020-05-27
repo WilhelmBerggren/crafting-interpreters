@@ -6,21 +6,11 @@ namespace crafting_interpreters
 {
     public class Lox
     {
-        private static bool hadError;
+        private static Interpreter interpreter = new Interpreter();
+        private static bool hadError = false;
+        private static bool hadRuntimeError = false;
         static void Main(string[] args)
         {
-            // var expr = new Expr<string>.Binary(
-            //     new Expr<string>.Unary(
-            //         new Token(TokenType.MINUS, "-", null, 1),
-            //         new Expr<string>.Literal(123)
-            //     ),
-            //     new Token(TokenType.STAR, "*", null, 1),
-            //     new Expr<string>.Grouping(
-            //         new Expr<string>.Literal(45.67)
-            //     )
-            // );
-
-            // Console.WriteLine(new AstPrinter().Print(expr));
 
             if (args.Length > 1)
             {
@@ -30,6 +20,8 @@ namespace crafting_interpreters
             else if (args.Length == 1)
             {
                 RunText(args[0]);
+                if(hadError) Environment.Exit(65);
+                if(hadRuntimeError) Environment.Exit(70);
             }
             else
             {
@@ -65,11 +57,12 @@ namespace crafting_interpreters
             var scanner = new Scanner(source);
             List<Token> tokens = scanner.ScanTokens();
             Parser parser = new Parser(tokens);
-            Expr<string> expr = parser.Parse();
+            Expr<object> expr = parser.Parse();
 
-            if(hadError) return;
+            if (hadError) return;
 
-            Console.WriteLine(new AstPrinter().Print(expr));
+            interpreter.Interpret(expr);
+            //Console.WriteLine(new AstPrinter().Print(expr));
         }
 
         public static void Error(int line, string message)
@@ -81,12 +74,19 @@ namespace crafting_interpreters
         {
             if (token.type == TokenType.EOF)
             {
-                Report(token.line, " at end", message);
+                Report(token.line, "at end", message);
             }
             else
             {
-                Report(token.line, $" at '{token.lexeme}'", message);
+                Report(token.line, $"at '{token.lexeme}'", message);
             }
+        }
+
+        public static void RuntimeError(RuntimeError error)
+        {
+            Console.Error.WriteLine(error.Message);
+            Console.Error.WriteLine($"line {error.token.line}");
+            hadRuntimeError = true;
         }
 
         public static void Report(int line, string where, string message)

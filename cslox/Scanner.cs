@@ -130,9 +130,6 @@ namespace crafting_interpreters
                 while (IsDigit(Peek())) Advance();
             }
 
-            Console.WriteLine(Source);
-            Console.WriteLine($"number at: {Start}, {Current}");
-            Console.WriteLine(Source.Substring(Start, Current - Start));
             AddToken(TokenType.NUMBER, Double.Parse(Source.Substring(Start, Current - Start)));
         }
 
