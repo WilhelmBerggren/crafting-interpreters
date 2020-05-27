@@ -159,7 +159,7 @@ namespace crafting_interpreters
 
             Advance();
 
-            string value = Source.Substring(Start + 1, Current - Start - 1);
+            string value = Source.Substring(Start + 1, Current - Start - 2);
             AddToken(TokenType.STRING, value);
         }
 

@@ -3,28 +3,28 @@ namespace crafting_interpreters {
     using System.Collections.Generic;
     using System.Linq;
 
-    public class AstPrinter : Visitor<string>
+    public class AstPrinter : ExprVisitor<string>
     {
         public string Print(Expr<string> expr) {
             return expr.Accept(this);
         }
-        public string visitBinaryExpr(Expr<string>.Binary expr)
+        public string VisitBinaryExpr(Expr<string>.Binary expr)
         {
             return Parenthesize(expr.op.lexeme, new List<Expr<string>> {expr.left, expr.right});
         }
 
-        public string visitGroupingExpr(Expr<string>.Grouping expr)
+        public string VisitGroupingExpr(Expr<string>.Grouping expr)
         {
             return Parenthesize("group", new List<Expr<string>> {expr.expression});
         }
 
-        public string visitLiteralExpr(Expr<string>.Literal expr)
+        public string VisitLiteralExpr(Expr<string>.Literal expr)
         {
             if(expr.value == null) return "nil";
             return expr.value.ToString();
         }
 
-        public string visitUnaryExpr(Expr<string>.Unary expr)
+        public string VisitUnaryExpr(Expr<string>.Unary expr)
         {
             return Parenthesize(expr.op.lexeme, new List<Expr<string>> {expr.right});
         }
@@ -35,6 +35,16 @@ namespace crafting_interpreters {
                 return $"{acc}  {e.Accept(this)}";
             });
             return $"({str})";
+        }
+
+        public string VisitVariableExpr(Expr<string>.Variable expr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitAssignExpr(Expr<string>.Assign expr)
+        {
+            throw new NotImplementedException();
         }
     }
 }

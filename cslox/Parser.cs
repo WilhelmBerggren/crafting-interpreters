@@ -14,29 +14,105 @@ namespace crafting_interpreters
             this.Tokens = tokens;
         }
 
-        public Expr<object> Parse()
+        public List<Stmt<Void>> Parse()
         {
-            try
+            List<Stmt<Void>> statements = new List<Stmt<Void>>();
+            while (!IsAtEnd())
             {
-                return Expression();
+                statements.Add(Declaration());
             }
-            catch (ParseError error)
-            {
-                var a = error;
+
+            return statements;
+        }
+
+        private Stmt<Void> Declaration() {
+            try {
+                if(Match(TokenType.VAR)) {
+                    return VarDeclaration();
+                }
+
+                return Statement();
+            }
+            catch (ParseError error) {
+                var e = error;
+                Synchronize();
                 return null;
             }
         }
 
+        private Stmt<Void> VarDeclaration() {
+            Token name = Consume(TokenType.IDENTIFIER, "Expect variable name.");
+
+            Expr<object> initializer = null;
+            if(Match(TokenType.EQUAL)) {
+                initializer = Expression();
+            }
+
+            Consume(TokenType.SEMICOLON, "Expect ';' after variable declaration");
+            return new Stmt<Void>.Var(name, initializer);
+        }
+
+        private Stmt<Void> Statement()
+        {
+            if (Match(TokenType.PRINT)) return PrintStatement();
+            if (Match(TokenType.LEFT_BRACE)) return new Stmt<Void>.Block(Block());
+
+            return ExpressionStatement();
+        }
+
         private Expr<object> Expression()
         {
-            return Equality();
+            return Assignment();
+        }
+
+        private Expr<object> Assignment() {
+            Expr<object> expr = Equality();
+
+            if(Match(TokenType.EQUAL)) {
+                Token equals = Previous();
+                Expr<object> value = Assignment();
+
+                if(typeof(Expr<object>.Variable).IsInstanceOfType(expr)) {
+                    Expr<object>.Variable varExpr = (Expr<object>.Variable) expr;
+                    return new Expr<object>.Assign(varExpr.name, value);
+                }
+
+                Error(equals, "Invalid assignment target.");
+            }
+            return expr;
+        }
+
+        private Stmt<Void> PrintStatement()
+        {
+            Expr<object> value = Expression();
+            Consume(TokenType.SEMICOLON, "Expect ';' after value.");
+            return new Stmt<Void>.Print(value);
+        }
+
+        private Stmt<Void> ExpressionStatement()
+        {
+            Expr<object> expr = Expression();
+            Consume(TokenType.SEMICOLON, "Expect ';' after value.");
+            return new Stmt<Void>.Expression(expr);
+        }
+
+        private List<Stmt<Void>> Block() {
+            var statements = new List<Stmt<Void>>();
+
+            while(!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
+            {
+                statements.Add(Declaration());
+            }
+
+            Consume(TokenType.RIGHT_BRACE, "Expect '}' after block.");
+            return statements;
         }
 
         private Expr<object> Equality()
         {
             Expr<object> expr = Comparison();
 
-            while (Match(new List<TokenType>() { TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL }))
+            while (Match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL))
             {
                 Token op = Previous();
                 Expr<object> right = Comparison();
@@ -58,6 +134,14 @@ namespace crafting_interpreters
             }
 
             return false;
+        }
+
+        private bool Match(TokenType type) {
+            return Match(new List<TokenType>() {type});
+        }
+
+        private bool Match(TokenType type1, TokenType type2) {
+            return Match(new List<TokenType>() {type1, type2});
         }
 
         private bool Check(TokenType type)
@@ -136,7 +220,7 @@ namespace crafting_interpreters
         {
             Expr<object> expr = Multiplication();
 
-            while (Match(new List<TokenType>() { TokenType.MINUS, TokenType.PLUS }))
+            while (Match(TokenType.MINUS, TokenType.PLUS ))
             {
                 Token op = Previous();
                 Expr<object> right = Multiplication();
@@ -150,7 +234,7 @@ namespace crafting_interpreters
         {
             Expr<object> expr = Unary();
 
-            while (Match(new List<TokenType>() { TokenType.SLASH, TokenType.STAR }))
+            while (Match(TokenType.SLASH, TokenType.STAR ))
             {
                 Token op = Previous();
                 Expr<object> right = Unary();
@@ -162,7 +246,7 @@ namespace crafting_interpreters
 
         private Expr<object> Unary()
         {
-            if (Match(new List<TokenType>() { TokenType.BANG, TokenType.MINUS }))
+            if (Match(TokenType.BANG, TokenType.MINUS))
             {
                 Token op = Previous();
                 Expr<object> right = Unary();
@@ -174,16 +258,20 @@ namespace crafting_interpreters
 
         private Expr<object> Primary()
         {
-            if (Match(new List<TokenType>() { TokenType.FALSE })) return new Expr<object>.Literal(false);
-            if (Match(new List<TokenType>() { TokenType.TRUE })) return new Expr<object>.Literal(true);
-            if (Match(new List<TokenType>() { TokenType.NIL })) return new Expr<object>.Literal(null);
+            if (Match(TokenType.FALSE)) return new Expr<object>.Literal(false);
+            if (Match(TokenType.TRUE)) return new Expr<object>.Literal(true);
+            if (Match(TokenType.NIL)) return new Expr<object>.Literal(null);
 
-            if (Match(new List<TokenType>() { TokenType.NUMBER, TokenType.STRING }))
+            if (Match(TokenType.NUMBER, TokenType.STRING))
             {
                 return new Expr<object>.Literal(Previous().literal);
             }
 
-            if (Match(new List<TokenType>() { TokenType.LEFT_PAREN }))
+            if (Match(TokenType.IDENTIFIER)) {
+                return new Expr<object>.Variable(Previous());
+            }
+
+            if (Match(TokenType.LEFT_PAREN))
             {
                 Expr<object> expr = Expression();
                 Consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.");

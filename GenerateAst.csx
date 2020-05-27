@@ -2,40 +2,38 @@
 using System;
 
 // --- Representing Code: Challenge 1 ---
-// expr -> expr ( "(" ( expr ) "," expr )* )? ")" | "." IDENTIFIER )*
+// expr -> expr ( "(" ( expr ) "," expr )* )== null ? ")" | "." IDENTIFIER )*
 //      | IDENTIFIER
 //      | NUMBER
 
-var types = new[] {
-    "Binary   : Expr<R> left, Token op, Expr<R> right",
-    "Grouping : Expr<R> expression",
-    "Literal  : Object value",
-    "Unary    : Token op, Expr<R> right"
-};
-
-static void DefineVisitor(string baseName, string[] types) {
-    WriteLine("    public interface Visitor<R> {");
-    foreach(var type in types) {
+static void DefineVisitor(string baseName, string generic, string[] types)
+{
+    WriteLine($"    public interface {baseName}Visitor{(generic != null ? $"<{generic}>" : "")} {{");
+    foreach (var type in types)
+    {
         string typeName = type.Split(":")[0].Trim();
-        WriteLine($"        R visit{typeName}{baseName}({baseName}<R>.{typeName} {baseName.ToLower()});");
+        WriteLine($"        {(generic != null ? $"{generic}" : "void")} Visit{typeName}{baseName}({baseName}{(generic != null ? $"<{generic}>" : "")}.{typeName} {baseName.ToLower()});");
     }
     WriteLine("    }");
 }
 
-static void DefineType(string baseName, string className, string fieldList) {
+static void DefineType(string baseName, string generic, string className, string fieldList)
+{
     WriteLine();
-    WriteLine($"        public class {className} : {baseName}<R>");
+    WriteLine($"        public class {className} : {baseName}{(generic != null ? $"<{generic}>" : "")}");
     WriteLine("        {");
     WriteLine($"           public {className} ({fieldList})");
     WriteLine("            {");
     var fields = fieldList.Split(", ");
-    foreach(var field in fields) {
+    foreach (var field in fields)
+    {
         var name = field.Split(" ")[1];
         WriteLine($"                this.{name} = {name};");
     }
     WriteLine("            }");
     WriteLine();
-    foreach(string field in fields) {
+    foreach (string field in fields)
+    {
         var type = field.Split(" ")[0];
         var name = field.Split(" ")[1];
         WriteLine($"            public {type} {name} {{ get; }}");
@@ -43,30 +41,45 @@ static void DefineType(string baseName, string className, string fieldList) {
 
     // Visitor pattern
     WriteLine();
-    WriteLine("            public override R Accept(Visitor<R> visitor) {");
-    WriteLine($"                return visitor.visit{className}{baseName}(this);");
+    WriteLine($"            public override {(generic != null ? $"{generic}" : "void")} Accept({baseName}Visitor{(generic != null ? $"<{generic}>" : "")} visitor) {{");
+    WriteLine($"                return visitor.Visit{className}{baseName}(this);");
     WriteLine("            }");
     WriteLine("        }");
-    WriteLine();
 }
 
-static void DefineAst(string baseName, string[] types) {
+static void DefineAst(string baseName, string generic, string[] types)
+{
     WriteLine("using System;");
+    WriteLine("using System.Collections.Generic;");
     WriteLine();
     WriteLine("namespace crafting_interpreters {");
     WriteLine();
-    DefineVisitor(baseName, types);
+    DefineVisitor(baseName, generic, types);
     WriteLine();
-    WriteLine("    public abstract class Expr<R> {");
-    WriteLine("        public abstract R Accept(Visitor<R> visitor);");
-    foreach(string type in types) {
+    WriteLine($"    public abstract class {baseName}{(generic != null ? $"<{generic}>" : "")} {{");
+    WriteLine($"        public abstract {(generic != null ? $"{generic}" : "void")} Accept({baseName}Visitor{(generic != null ? $"<{generic}>" : "")} visitor);");
+    foreach (string type in types)
+    {
         string className = type.Split(":")[0].Trim();
         string fields = type.Split(":")[1].Trim();
-        DefineType(baseName, className, fields);
+        DefineType(baseName, generic, className, fields);
     }
-    WriteLine();
     WriteLine("    }");
     WriteLine("}");
 }
 
-DefineAst("Expr", types);
+// DefineAst("Expr", "R", new[] {
+//     "Assign   : Token name, Expr<R> value",
+//     "Binary   : Expr<R> left, Token op, Expr<R> right",
+//     "Grouping : Expr<R> expression",
+//     "Literal  : Object value",
+//     "Unary    : Token op, Expr<R> right",
+//     "Variable : Token name"
+// });
+
+DefineAst("Stmt", "R", new[] {
+    "Block      : List<Stmt<R>> statements",
+    "Expression : Expr<object> expression",
+    "Print      : Expr<object> expression",
+    "Var        : Token name, Expr<object> initializer"
+});

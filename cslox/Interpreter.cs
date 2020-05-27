@@ -1,35 +1,61 @@
 using System;
+using System.Collections.Generic;
 
 namespace crafting_interpreters
 {
-    public class Interpreter : Visitor<Object>
+    // void is only a return type in C#, so I brought my own. It does nothing.
+    public sealed class Void {
+        private Void() { }
+    }
+
+    public class Interpreter : ExprVisitor<Object>, StmtVisitor<Void>
     {
-        public void Interpret(Expr<Object> expr) {
+        private Env env = new Env();
+        public void Interpret(List<Stmt<Void>> statements) {
             try {
-                Object value = Evaluate(expr);
-                Console.WriteLine(Stringify(value));
+                foreach(var statement in statements) {
+                    Execute(statement);
+                }
             }
             catch(RuntimeError error) {
                 Lox.RuntimeError(error);
             }
-
         }
+
+        private void Execute(Stmt<Void> stmt) {
+            stmt.Accept(this);
+        }
+
+        private void ExecuteBlock(List<Stmt<Void>> statements, Env environment) {
+            Env previous = this.env;
+            try {
+                this.env = environment;
+
+                foreach(var statement in statements) {
+                    Execute(statement);
+                }
+            }
+            finally {
+                this.env = previous;
+            }
+        }
+
         private Object Evaluate(Expr<Object> expr)
         {
             return expr.Accept(this);
         }
 
-        public object visitLiteralExpr(Expr<object>.Literal expr)
+        public object VisitLiteralExpr(Expr<object>.Literal expr)
         {
             return expr.value;
         }
 
-        public object visitGroupingExpr(Expr<object>.Grouping expr)
+        public object VisitGroupingExpr(Expr<object>.Grouping expr)
         {
             return expr.expression;
         }
 
-        public object visitUnaryExpr(Expr<object>.Unary expr)
+        public object VisitUnaryExpr(Expr<object>.Unary expr)
         {
             Object right = Evaluate(expr.right);
 
@@ -58,7 +84,7 @@ namespace crafting_interpreters
             throw new RuntimeError(op, "Operand must be a number.");
         }
 
-        public object visitBinaryExpr(Expr<object>.Binary expr)
+        public object VisitBinaryExpr(Expr<object>.Binary expr)
         {
             object left = Evaluate(expr.left);
             object right = Evaluate(expr.right);
@@ -130,6 +156,48 @@ namespace crafting_interpreters
             }
 
             return obj.ToString();
+        }
+
+        public Void VisitExpressionStmt(Stmt<Void>.Expression stmt)
+        {
+            Evaluate(stmt.expression);
+            return null;
+        }
+
+        public Void VisitPrintStmt(Stmt<Void>.Print stmt)
+        {
+            Object value = Evaluate(stmt.expression);
+            Console.WriteLine(Stringify(value));
+            return null;
+        }
+
+        public Void VisitVarStmt(Stmt<Void>.Var stmt)
+        {
+            object value = null;
+            if(stmt.initializer != null) {
+                value = Evaluate(stmt.initializer);
+            }
+
+            env.Define(stmt.name.lexeme, value);
+            return null;
+        }
+
+        public object VisitAssignExpr(Expr<object>.Assign expr) {
+            object value = Evaluate(expr.value);
+
+            env.Assign(expr.name, value);
+            return value;
+        }
+
+        public object VisitVariableExpr(Expr<object>.Variable expr)
+        {
+            return env.Get(expr.name);
+        }
+
+        public Void VisitBlockStmt(Stmt<Void>.Block stmt)
+        {
+            ExecuteBlock(stmt.statements, new Env(env));
+            return null;
         }
     }
 }

@@ -11,7 +11,6 @@ namespace crafting_interpreters
         private static bool hadRuntimeError = false;
         static void Main(string[] args)
         {
-
             if (args.Length > 1)
             {
                 Console.WriteLine("Usage: cslox [script]");
@@ -19,12 +18,14 @@ namespace crafting_interpreters
             }
             else if (args.Length == 1)
             {
-                RunText(args[0]);
+                Console.WriteLine($"Running file: {args[0]}");
+                RunFile(args[0]);
                 if(hadError) Environment.Exit(65);
                 if(hadRuntimeError) Environment.Exit(70);
             }
             else
             {
+                Console.WriteLine("Entering REPL");
                 RunPrompt();
             }
         }
@@ -37,7 +38,9 @@ namespace crafting_interpreters
         }
         public static void RunFile(string path)
         {
-            string text = File.ReadAllText(path);
+            string source = File.ReadAllText(path);
+            Run(source);
+            if (hadError) Environment.Exit(65);
         }
 
         public static void RunPrompt()
@@ -57,7 +60,7 @@ namespace crafting_interpreters
             var scanner = new Scanner(source);
             List<Token> tokens = scanner.ScanTokens();
             Parser parser = new Parser(tokens);
-            Expr<object> expr = parser.Parse();
+            List<Stmt<Void>> expr = parser.Parse();
 
             if (hadError) return;
 

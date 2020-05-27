@@ -2,15 +2,33 @@ using System;
 
 namespace crafting_interpreters {
 
-    public interface Visitor<R> {
-        R visitBinaryExpr(Expr<R>.Binary expr);
-        R visitGroupingExpr(Expr<R>.Grouping expr);
-        R visitLiteralExpr(Expr<R>.Literal expr);
-        R visitUnaryExpr(Expr<R>.Unary expr);
+    public interface ExprVisitor<R> {
+        R VisitAssignExpr(Expr<R>.Assign expr);
+        R VisitBinaryExpr(Expr<R>.Binary expr);
+        R VisitGroupingExpr(Expr<R>.Grouping expr);
+        R VisitLiteralExpr(Expr<R>.Literal expr);
+        R VisitUnaryExpr(Expr<R>.Unary expr);
+        R VisitVariableExpr(Expr<R>.Variable expr);
     }
 
     public abstract class Expr<R> {
-        public abstract R Accept(Visitor<R> visitor);
+        public abstract R Accept(ExprVisitor<R> visitor);
+
+        public class Assign : Expr<R>
+        {
+           public Assign (Token name, Expr<R> value)
+            {
+                this.name = name;
+                this.value = value;
+            }
+
+            public Token name { get; }
+            public Expr<R> value { get; }
+
+            public override R Accept(ExprVisitor<R> visitor) {
+                return visitor.VisitAssignExpr(this);
+            }
+        }
 
         public class Binary : Expr<R>
         {
@@ -25,11 +43,10 @@ namespace crafting_interpreters {
             public Token op { get; }
             public Expr<R> right { get; }
 
-            public override R Accept(Visitor<R> visitor) {
-                return visitor.visitBinaryExpr(this);
+            public override R Accept(ExprVisitor<R> visitor) {
+                return visitor.VisitBinaryExpr(this);
             }
         }
-
 
         public class Grouping : Expr<R>
         {
@@ -40,11 +57,10 @@ namespace crafting_interpreters {
 
             public Expr<R> expression { get; }
 
-            public override R Accept(Visitor<R> visitor) {
-                return visitor.visitGroupingExpr(this);
+            public override R Accept(ExprVisitor<R> visitor) {
+                return visitor.VisitGroupingExpr(this);
             }
         }
-
 
         public class Literal : Expr<R>
         {
@@ -55,11 +71,10 @@ namespace crafting_interpreters {
 
             public Object value { get; }
 
-            public override R Accept(Visitor<R> visitor) {
-                return visitor.visitLiteralExpr(this);
+            public override R Accept(ExprVisitor<R> visitor) {
+                return visitor.VisitLiteralExpr(this);
             }
         }
-
 
         public class Unary : Expr<R>
         {
@@ -72,11 +87,23 @@ namespace crafting_interpreters {
             public Token op { get; }
             public Expr<R> right { get; }
 
-            public override R Accept(Visitor<R> visitor) {
-                return visitor.visitUnaryExpr(this);
+            public override R Accept(ExprVisitor<R> visitor) {
+                return visitor.VisitUnaryExpr(this);
             }
         }
 
+        public class Variable : Expr<R>
+        {
+           public Variable (Token name)
+            {
+                this.name = name;
+            }
 
+            public Token name { get; }
+
+            public override R Accept(ExprVisitor<R> visitor) {
+                return visitor.VisitVariableExpr(this);
+            }
+        }
     }
 }
