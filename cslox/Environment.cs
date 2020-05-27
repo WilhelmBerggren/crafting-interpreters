@@ -35,7 +35,7 @@ namespace crafting_interpreters {
 
         public void Assign(Token name, object value) {
             if(values.ContainsKey(name.lexeme)) {
-                values.Add(name.lexeme, value);
+                values[name.lexeme] = value;
                 return;
             }
 

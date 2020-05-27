@@ -46,5 +46,10 @@ namespace crafting_interpreters {
         {
             throw new NotImplementedException();
         }
+
+        public string VisitLogicalExpr(Expr<string>.Logical expr)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

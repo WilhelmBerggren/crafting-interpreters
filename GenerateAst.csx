@@ -73,6 +73,7 @@ static void DefineAst(string baseName, string generic, string[] types)
 //     "Binary   : Expr<R> left, Token op, Expr<R> right",
 //     "Grouping : Expr<R> expression",
 //     "Literal  : Object value",
+//     "Logical  : Expr<R> left, Token op, Expr<R> right",
 //     "Unary    : Token op, Expr<R> right",
 //     "Variable : Token name"
 // });
@@ -80,6 +81,8 @@ static void DefineAst(string baseName, string generic, string[] types)
 DefineAst("Stmt", "R", new[] {
     "Block      : List<Stmt<R>> statements",
     "Expression : Expr<object> expression",
+    "If         : Expr<object> condition, Stmt<R> thenBranch, Stmt<R> elseBranch",
     "Print      : Expr<object> expression",
-    "Var        : Token name, Expr<object> initializer"
+    "Var        : Token name, Expr<object> initializer",
+    "While      : Expr<object> condition, Stmt<R> body"
 });

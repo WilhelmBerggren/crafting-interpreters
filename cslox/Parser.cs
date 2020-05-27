@@ -52,12 +52,82 @@ namespace crafting_interpreters
             return new Stmt<Void>.Var(name, initializer);
         }
 
+        private Stmt<Void> WhileStatement() {
+            Consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.");
+            Expr<object> condition = Expression();
+            Consume(TokenType.RIGHT_PAREN, "Expect ')' after condition.");
+            Stmt<Void> body = Statement();
+            
+            return new Stmt<Void>.While(condition, body);
+        }
+
         private Stmt<Void> Statement()
         {
+            if(Match(TokenType.IF)) return ifStatement();
             if (Match(TokenType.PRINT)) return PrintStatement();
+            if(Match(TokenType.WHILE)) return WhileStatement();
             if (Match(TokenType.LEFT_BRACE)) return new Stmt<Void>.Block(Block());
 
             return ExpressionStatement();
+        }
+
+        private Stmt<Void> ForStatement() {
+            Consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.");
+
+            Stmt<Void> initializer;
+            if(Match(TokenType.SEMICOLON)) {
+                initializer = null;
+            }
+            else if(Match(TokenType.VAR)) {
+                initializer = VarDeclaration();
+            }
+            else {
+                initializer = ExpressionStatement();
+            }
+
+            Expr<object> condition = null;
+            if(Check(TokenType.SEMICOLON)) {
+                condition = Expression();
+            }
+            Consume(TokenType.SEMICOLON, "Expect ';' after loop condition.");
+
+            Expr<object> increment = null;
+            if(!Check(TokenType.RIGHT_PAREN)) {
+                increment = Expression();
+            }
+            Consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses.");
+
+            Stmt<Void> body = Statement();
+
+            if(increment != null) {
+                body = new Stmt<Void>.Block(new List<Stmt<Void>> {
+                    body,
+                    new Stmt<Void>.Expression(increment)
+                });
+            }
+
+            if(condition == null) condition = new Expr<object>.Literal(true);
+            body = new Stmt<Void>.While(condition, body);
+
+            if(initializer != null) {
+                body = new Stmt<Void>.Block(new List<Stmt<Void>>() {initializer, body});
+            }
+
+            return body;
+        }
+
+        private Stmt<Void> ifStatement() {
+            Consume(TokenType.LEFT_PAREN, "Expect '(' after 'if.'");
+            Expr<object> condition = Expression();
+            Consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition.");
+
+            Stmt<Void> thenBranch = Statement();
+            Stmt<Void> elseBranch = null;
+            if(Match(TokenType.ELSE)) {
+                elseBranch = Statement();
+            }
+
+            return new Stmt<Void>.If(condition, thenBranch, elseBranch);
         }
 
         private Expr<object> Expression()
@@ -66,7 +136,7 @@ namespace crafting_interpreters
         }
 
         private Expr<object> Assignment() {
-            Expr<object> expr = Equality();
+            Expr<object> expr = Or();
 
             if(Match(TokenType.EQUAL)) {
                 Token equals = Previous();
@@ -79,6 +149,30 @@ namespace crafting_interpreters
 
                 Error(equals, "Invalid assignment target.");
             }
+            return expr;
+        }
+        
+        private Expr<object> Or() {
+            Expr<object> expr = And();
+
+            while(Match(TokenType.OR)) {
+                Token op = Previous();
+                Expr<object> right = And();
+                expr = new Expr<object>.Logical(expr, op, right);
+            }
+
+            return expr;
+        }
+
+        private Expr<object> And() {
+            Expr<object> expr = Equality();
+
+            while(Match(TokenType.AND)) {
+                Token op = Previous();
+                Expr<object> right = Equality();
+                expr = new Expr<object>.Logical(expr, op, right);
+            }
+
             return expr;
         }
 

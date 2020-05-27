@@ -26,10 +26,10 @@ namespace crafting_interpreters
             stmt.Accept(this);
         }
 
-        private void ExecuteBlock(List<Stmt<Void>> statements, Env environment) {
+        private void ExecuteBlock(List<Stmt<Void>> statements, Env env) {
             Env previous = this.env;
             try {
-                this.env = environment;
+                this.env = env;
 
                 foreach(var statement in statements) {
                     Execute(statement);
@@ -182,6 +182,14 @@ namespace crafting_interpreters
             return null;
         }
 
+        public Void VisitWhileStmt(Stmt<Void>.While stmt) {
+            while(IsTruthy(Evaluate(stmt.condition))) {
+                Execute(stmt.body);
+            }
+
+            return null;
+        }
+
         public object VisitAssignExpr(Expr<object>.Assign expr) {
             object value = Evaluate(expr.value);
 
@@ -198,6 +206,31 @@ namespace crafting_interpreters
         {
             ExecuteBlock(stmt.statements, new Env(env));
             return null;
+        }
+
+        public Void VisitIfStmt(Stmt<Void>.If stmt)
+        {
+            if(IsTruthy(Evaluate(stmt.condition))) {
+                Execute(stmt.thenBranch);
+            } else if(stmt.elseBranch != null) {
+                Execute(stmt.elseBranch);
+            }
+            
+            return null;
+        }
+
+        public object VisitLogicalExpr(Expr<object>.Logical expr)
+        {
+            object left = Evaluate(expr.left);
+
+            if(expr.op.type == TokenType.OR) {
+                if(IsTruthy(left)) return left;
+            }
+            else {
+                if(!IsTruthy(left)) return left;
+            }
+
+            return Evaluate(expr.right);
         }
     }
 }

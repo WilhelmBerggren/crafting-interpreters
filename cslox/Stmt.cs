@@ -6,8 +6,10 @@ namespace crafting_interpreters {
     public interface StmtVisitor<R> {
         R VisitBlockStmt(Stmt<R>.Block stmt);
         R VisitExpressionStmt(Stmt<R>.Expression stmt);
+        R VisitIfStmt(Stmt<R>.If stmt);
         R VisitPrintStmt(Stmt<R>.Print stmt);
         R VisitVarStmt(Stmt<R>.Var stmt);
+        R VisitWhileStmt(Stmt<R>.While stmt);
     }
 
     public abstract class Stmt<R> {
@@ -41,6 +43,24 @@ namespace crafting_interpreters {
             }
         }
 
+        public class If : Stmt<R>
+        {
+           public If (Expr<object> condition, Stmt<R> thenBranch, Stmt<R> elseBranch)
+            {
+                this.condition = condition;
+                this.thenBranch = thenBranch;
+                this.elseBranch = elseBranch;
+            }
+
+            public Expr<object> condition { get; }
+            public Stmt<R> thenBranch { get; }
+            public Stmt<R> elseBranch { get; }
+
+            public override R Accept(StmtVisitor<R> visitor) {
+                return visitor.VisitIfStmt(this);
+            }
+        }
+
         public class Print : Stmt<R>
         {
            public Print (Expr<object> expression)
@@ -68,6 +88,22 @@ namespace crafting_interpreters {
 
             public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitVarStmt(this);
+            }
+        }
+
+        public class While : Stmt<R>
+        {
+           public While (Expr<object> condition, Stmt<R> body)
+            {
+                this.condition = condition;
+                this.body = body;
+            }
+
+            public Expr<object> condition { get; }
+            public Stmt<R> body { get; }
+
+            public override R Accept(StmtVisitor<R> visitor) {
+                return visitor.VisitWhileStmt(this);
             }
         }
     }
