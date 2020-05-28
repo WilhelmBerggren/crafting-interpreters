@@ -51,5 +51,10 @@ namespace crafting_interpreters {
         {
             throw new NotImplementedException();
         }
+
+        public string VisitCallExpr(Expr<string>.Call expr)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

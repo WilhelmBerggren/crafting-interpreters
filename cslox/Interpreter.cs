@@ -10,7 +10,13 @@ namespace crafting_interpreters
 
     public class Interpreter : ExprVisitor<Object>, StmtVisitor<Void>
     {
-        private Env env = new Env();
+        public Env globals = new Env();
+        private Env env;
+        public Interpreter() {
+            this.env = globals;
+            globals.Define("clock", new Clock());
+        }
+
         public void Interpret(List<Stmt<Void>> statements) {
             try {
                 foreach(var statement in statements) {
@@ -26,7 +32,7 @@ namespace crafting_interpreters
             stmt.Accept(this);
         }
 
-        private void ExecuteBlock(List<Stmt<Void>> statements, Env env) {
+        public void ExecuteBlock(List<Stmt<Void>> statements, Env env) {
             Env previous = this.env;
             try {
                 this.env = env;
@@ -231,6 +237,42 @@ namespace crafting_interpreters
             }
 
             return Evaluate(expr.right);
+        }
+
+        public object VisitCallExpr(Expr<object>.Call expr)
+        {
+            Object callee = Evaluate(expr.callee);
+
+            var args = new List<object>();
+            foreach(Expr<object> arg in expr.arguments) {
+                args.Add(Evaluate(arg));
+            }
+
+            if(!(typeof(ILoxCallable).IsInstanceOfType(callee))) {
+                throw new RuntimeError(expr.paren, "Can only call functions and classes.");
+            }
+
+            ILoxCallable function = (ILoxCallable)callee;
+            if(args.Count != function.Arity()) {
+                throw new RuntimeError(expr.paren, $"Expected {function.Arity()} arguments but got {args.Count}.");
+            }
+
+            return function.Call(this, args);
+        }
+
+        public Void VisitFunctionStmt(Stmt<Void>.Function stmt)
+        {
+            var function = new LoxFunction(stmt, env);
+            env.Define(stmt.name.lexeme, function);
+            return null;
+        }
+
+        public Void VisitReturnStmt(Stmt<Void>.Return stmt)
+        {
+            object value = null;
+            if(stmt.value != null) value = Evaluate(stmt.value);
+
+            throw new Return(value);
         }
     }
 }

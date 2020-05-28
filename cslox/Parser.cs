@@ -25,26 +25,33 @@ namespace crafting_interpreters
             return statements;
         }
 
-        private Stmt<Void> Declaration() {
-            try {
-                if(Match(TokenType.VAR)) {
+        private Stmt<Void> Declaration()
+        {
+            try
+            {
+                if (Match(TokenType.FUN)) return Function("function");
+                if (Match(TokenType.VAR))
+                {
                     return VarDeclaration();
                 }
 
                 return Statement();
             }
-            catch (ParseError error) {
+            catch (ParseError error)
+            {
                 var e = error;
                 Synchronize();
                 return null;
             }
         }
 
-        private Stmt<Void> VarDeclaration() {
+        private Stmt<Void> VarDeclaration()
+        {
             Token name = Consume(TokenType.IDENTIFIER, "Expect variable name.");
 
             Expr<object> initializer = null;
-            if(Match(TokenType.EQUAL)) {
+            if (Match(TokenType.EQUAL))
+            {
                 initializer = Expression();
             }
 
@@ -52,78 +59,91 @@ namespace crafting_interpreters
             return new Stmt<Void>.Var(name, initializer);
         }
 
-        private Stmt<Void> WhileStatement() {
+        private Stmt<Void> WhileStatement()
+        {
             Consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.");
             Expr<object> condition = Expression();
             Consume(TokenType.RIGHT_PAREN, "Expect ')' after condition.");
             Stmt<Void> body = Statement();
-            
+
             return new Stmt<Void>.While(condition, body);
         }
 
         private Stmt<Void> Statement()
         {
-            if(Match(TokenType.IF)) return ifStatement();
+            if (Match(TokenType.FOR)) return ForStatement();
+            if (Match(TokenType.IF)) return IfStatement();
             if (Match(TokenType.PRINT)) return PrintStatement();
-            if(Match(TokenType.WHILE)) return WhileStatement();
+            if (Match(TokenType.RETURN)) return ReturnStatement();
+            if (Match(TokenType.WHILE)) return WhileStatement();
             if (Match(TokenType.LEFT_BRACE)) return new Stmt<Void>.Block(Block());
 
             return ExpressionStatement();
         }
 
-        private Stmt<Void> ForStatement() {
+        private Stmt<Void> ForStatement()
+        {
             Consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.");
 
             Stmt<Void> initializer;
-            if(Match(TokenType.SEMICOLON)) {
+            if (Match(TokenType.SEMICOLON))
+            {
                 initializer = null;
             }
-            else if(Match(TokenType.VAR)) {
+            else if (Match(TokenType.VAR))
+            {
                 initializer = VarDeclaration();
             }
-            else {
+            else
+            {
                 initializer = ExpressionStatement();
             }
 
             Expr<object> condition = null;
-            if(Check(TokenType.SEMICOLON)) {
+            if (!Check(TokenType.SEMICOLON))
+            {
                 condition = Expression();
             }
             Consume(TokenType.SEMICOLON, "Expect ';' after loop condition.");
 
             Expr<object> increment = null;
-            if(!Check(TokenType.RIGHT_PAREN)) {
+            if (!Check(TokenType.RIGHT_PAREN))
+            {
                 increment = Expression();
             }
             Consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses.");
 
             Stmt<Void> body = Statement();
 
-            if(increment != null) {
+            if (increment != null)
+            {
                 body = new Stmt<Void>.Block(new List<Stmt<Void>> {
                     body,
                     new Stmt<Void>.Expression(increment)
                 });
             }
 
-            if(condition == null) condition = new Expr<object>.Literal(true);
+            if (condition == null) condition = new Expr<object>.Literal(true);
             body = new Stmt<Void>.While(condition, body);
 
-            if(initializer != null) {
-                body = new Stmt<Void>.Block(new List<Stmt<Void>>() {initializer, body});
+            if (initializer != null)
+            {
+                body = new Stmt<Void>.Block(new List<Stmt<Void>>() { initializer, body });
             }
 
             return body;
         }
 
-        private Stmt<Void> ifStatement() {
+        private Stmt<Void> IfStatement()
+        {
             Consume(TokenType.LEFT_PAREN, "Expect '(' after 'if.'");
             Expr<object> condition = Expression();
             Consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition.");
 
             Stmt<Void> thenBranch = Statement();
             Stmt<Void> elseBranch = null;
-            if(Match(TokenType.ELSE)) {
+            if (Match(TokenType.ELSE))
+            {
                 elseBranch = Statement();
             }
 
@@ -135,15 +155,18 @@ namespace crafting_interpreters
             return Assignment();
         }
 
-        private Expr<object> Assignment() {
+        private Expr<object> Assignment()
+        {
             Expr<object> expr = Or();
 
-            if(Match(TokenType.EQUAL)) {
+            if (Match(TokenType.EQUAL))
+            {
                 Token equals = Previous();
                 Expr<object> value = Assignment();
 
-                if(typeof(Expr<object>.Variable).IsInstanceOfType(expr)) {
-                    Expr<object>.Variable varExpr = (Expr<object>.Variable) expr;
+                if (typeof(Expr<object>.Variable).IsInstanceOfType(expr))
+                {
+                    Expr<object>.Variable varExpr = (Expr<object>.Variable)expr;
                     return new Expr<object>.Assign(varExpr.name, value);
                 }
 
@@ -151,11 +174,13 @@ namespace crafting_interpreters
             }
             return expr;
         }
-        
-        private Expr<object> Or() {
+
+        private Expr<object> Or()
+        {
             Expr<object> expr = And();
 
-            while(Match(TokenType.OR)) {
+            while (Match(TokenType.OR))
+            {
                 Token op = Previous();
                 Expr<object> right = And();
                 expr = new Expr<object>.Logical(expr, op, right);
@@ -164,10 +189,12 @@ namespace crafting_interpreters
             return expr;
         }
 
-        private Expr<object> And() {
+        private Expr<object> And()
+        {
             Expr<object> expr = Equality();
 
-            while(Match(TokenType.AND)) {
+            while (Match(TokenType.AND))
+            {
                 Token op = Previous();
                 Expr<object> right = Equality();
                 expr = new Expr<object>.Logical(expr, op, right);
@@ -183,6 +210,18 @@ namespace crafting_interpreters
             return new Stmt<Void>.Print(value);
         }
 
+        private Stmt<Void> ReturnStatement()
+        {
+            Token keyword = Previous();
+            Expr<object> value = null;
+            if (!Check(TokenType.SEMICOLON))
+            {
+                value = Expression();
+            }
+            Consume(TokenType.SEMICOLON, "Expect ';' after return value.");
+            return new Stmt<Void>.Return(keyword, value);
+        }
+
         private Stmt<Void> ExpressionStatement()
         {
             Expr<object> expr = Expression();
@@ -190,10 +229,36 @@ namespace crafting_interpreters
             return new Stmt<Void>.Expression(expr);
         }
 
-        private List<Stmt<Void>> Block() {
+        private Stmt<Void> Function(string kind)
+        {
+            Token name = Consume(TokenType.IDENTIFIER, $"Expect {kind} name.");
+            Consume(TokenType.LEFT_PAREN, $"Expect '(' after {kind} name.");
+            var parameters = new List<Token>();
+            if (!Check(TokenType.RIGHT_PAREN))
+            {
+                do
+                {
+                    if (parameters.Count >= 255)
+                    {
+                        Error(Peek(), "Cannot have more than 255 parameters");
+                    }
+
+                    parameters.Add(Consume(TokenType.IDENTIFIER, "Expected parameter name."));
+                }
+                while (Match(TokenType.COMMA));
+            }
+            Consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.");
+
+            Consume(TokenType.LEFT_BRACE, $"Expect '{{' before {kind} body.");
+            var body = Block();
+            return new Stmt<Void>.Function(name, parameters, body);
+        }
+
+        private List<Stmt<Void>> Block()
+        {
             var statements = new List<Stmt<Void>>();
 
-            while(!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
+            while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
             {
                 statements.Add(Declaration());
             }
@@ -230,12 +295,14 @@ namespace crafting_interpreters
             return false;
         }
 
-        private bool Match(TokenType type) {
-            return Match(new List<TokenType>() {type});
+        private bool Match(TokenType type)
+        {
+            return Match(new List<TokenType>() { type });
         }
 
-        private bool Match(TokenType type1, TokenType type2) {
-            return Match(new List<TokenType>() {type1, type2});
+        private bool Match(TokenType type1, TokenType type2)
+        {
+            return Match(new List<TokenType>() { type1, type2 });
         }
 
         private bool Check(TokenType type)
@@ -314,7 +381,7 @@ namespace crafting_interpreters
         {
             Expr<object> expr = Multiplication();
 
-            while (Match(TokenType.MINUS, TokenType.PLUS ))
+            while (Match(TokenType.MINUS, TokenType.PLUS))
             {
                 Token op = Previous();
                 Expr<object> right = Multiplication();
@@ -328,7 +395,7 @@ namespace crafting_interpreters
         {
             Expr<object> expr = Unary();
 
-            while (Match(TokenType.SLASH, TokenType.STAR ))
+            while (Match(TokenType.SLASH, TokenType.STAR))
             {
                 Token op = Previous();
                 Expr<object> right = Unary();
@@ -347,7 +414,47 @@ namespace crafting_interpreters
                 return new Expr<object>.Unary(op, right);
             }
 
-            return Primary();
+            return Call();
+        }
+
+        private Expr<object> FinishCall(Expr<object> callee)
+        {
+            var args = new List<Expr<object>>();
+            if (!Check(TokenType.RIGHT_PAREN))
+            {
+                do
+                {
+                    if (args.Count >= 255)
+                    {
+                        Error(Peek(), "Cannot have more than 255 arguments.");
+                    }
+                    args.Add(Expression());
+                }
+                while (Match(TokenType.COMMA));
+            }
+
+            Token paren = Consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.");
+
+            return new Expr<object>.Call(callee, paren, args);
+        }
+
+        private Expr<object> Call()
+        {
+            Expr<object> expr = Primary();
+
+            while (true)
+            {
+                if (Match(TokenType.LEFT_PAREN))
+                {
+                    expr = FinishCall(expr);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return expr;
         }
 
         private Expr<object> Primary()
@@ -361,7 +468,8 @@ namespace crafting_interpreters
                 return new Expr<object>.Literal(Previous().literal);
             }
 
-            if (Match(TokenType.IDENTIFIER)) {
+            if (Match(TokenType.IDENTIFIER))
+            {
                 return new Expr<object>.Variable(Previous());
             }
 

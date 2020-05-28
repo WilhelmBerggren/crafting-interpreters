@@ -6,8 +6,10 @@ namespace crafting_interpreters {
     public interface StmtVisitor<R> {
         R VisitBlockStmt(Stmt<R>.Block stmt);
         R VisitExpressionStmt(Stmt<R>.Expression stmt);
+        R VisitFunctionStmt(Stmt<R>.Function stmt);
         R VisitIfStmt(Stmt<R>.If stmt);
         R VisitPrintStmt(Stmt<R>.Print stmt);
+        R VisitReturnStmt(Stmt<R>.Return stmt);
         R VisitVarStmt(Stmt<R>.Var stmt);
         R VisitWhileStmt(Stmt<R>.While stmt);
     }
@@ -43,6 +45,24 @@ namespace crafting_interpreters {
             }
         }
 
+        public class Function : Stmt<R>
+        {
+           public Function (Token name, List<Token> parameters, List<Stmt<R>> body)
+            {
+                this.name = name;
+                this.parameters = parameters;
+                this.body = body;
+            }
+
+            public Token name { get; }
+            public List<Token> parameters { get; }
+            public List<Stmt<R>> body { get; }
+
+            public override R Accept(StmtVisitor<R> visitor) {
+                return visitor.VisitFunctionStmt(this);
+            }
+        }
+
         public class If : Stmt<R>
         {
            public If (Expr<object> condition, Stmt<R> thenBranch, Stmt<R> elseBranch)
@@ -72,6 +92,22 @@ namespace crafting_interpreters {
 
             public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitPrintStmt(this);
+            }
+        }
+
+        public class Return : Stmt<R>
+        {
+           public Return (Token keyword, Expr<object> value)
+            {
+                this.keyword = keyword;
+                this.value = value;
+            }
+
+            public Token keyword { get; }
+            public Expr<object> value { get; }
+
+            public override R Accept(StmtVisitor<R> visitor) {
+                return visitor.VisitReturnStmt(this);
             }
         }
 
