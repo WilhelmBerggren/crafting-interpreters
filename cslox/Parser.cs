@@ -29,6 +29,7 @@ namespace crafting_interpreters
         {
             try
             {
+                if (Match(TokenType.CLASS)) return ClassDeclaration();
                 if (Match(TokenType.FUN)) return Function("function");
                 if (Match(TokenType.VAR))
                 {
@@ -169,6 +170,11 @@ namespace crafting_interpreters
                     Expr<object>.Variable varExpr = (Expr<object>.Variable)expr;
                     return new Expr<object>.Assign(varExpr.name, value);
                 }
+                else if (typeof(Expr<object>.Get).IsInstanceOfType(expr))
+                {
+                    Expr<object>.Get getExpr = (Expr<object>.Get)expr;
+                    return new Expr<object>.Set(getExpr.obj, getExpr.name, value);
+                }
 
                 Error(equals, "Invalid assignment target.");
             }
@@ -229,7 +235,7 @@ namespace crafting_interpreters
             return new Stmt<Void>.Expression(expr);
         }
 
-        private Stmt<Void> Function(string kind)
+        private Stmt<Void>.Function Function(string kind)
         {
             Token name = Consume(TokenType.IDENTIFIER, $"Expect {kind} name.");
             Consume(TokenType.LEFT_PAREN, $"Expect '(' after {kind} name.");
@@ -252,6 +258,22 @@ namespace crafting_interpreters
             Consume(TokenType.LEFT_BRACE, $"Expect '{{' before {kind} body.");
             var body = Block();
             return new Stmt<Void>.Function(name, parameters, body);
+        }
+
+        private Stmt<Void>.Class ClassDeclaration()
+        {
+            Token name = Consume(TokenType.IDENTIFIER, "Expect class name.");
+            Consume(TokenType.LEFT_BRACE, "Expect '{' before class body.");
+
+            var methods = new List<Stmt<Void>.Function>();
+            while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
+            {
+                methods.Add(Function("method"));
+            }
+
+            Consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.");
+
+            return new Stmt<Void>.Class(name, methods);
         }
 
         private List<Stmt<Void>> Block()
@@ -448,6 +470,11 @@ namespace crafting_interpreters
                 {
                     expr = FinishCall(expr);
                 }
+                else if (Match(TokenType.DOT))
+                {
+                    Token name = Consume(TokenType.IDENTIFIER, "Expect property name after '.'.");
+                    expr = new Expr<object>.Get(expr, name);
+                }
                 else
                 {
                     break;
@@ -466,6 +493,11 @@ namespace crafting_interpreters
             if (Match(TokenType.NUMBER, TokenType.STRING))
             {
                 return new Expr<object>.Literal(Previous().literal);
+            }
+
+            if (Match(TokenType.THIS))
+            {
+                return new Expr<object>.This(Previous());
             }
 
             if (Match(TokenType.IDENTIFIER))

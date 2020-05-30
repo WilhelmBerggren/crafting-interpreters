@@ -2,42 +2,61 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace crafting_interpreters {
-    public class Resolver : ExprVisitor<object>, StmtVisitor<Void> {
+namespace crafting_interpreters
+{
+    public class Resolver : ExprVisitor<object>, StmtVisitor<Void>
+    {
         private Interpreter interpreter;
         private Stack<Dictionary<string, bool>> scopes = new Stack<Dictionary<string, bool>>();
         private FunctionType currentFunction = FunctionType.NONE;
 
-        public Resolver(Interpreter interpreter) {
+        public Resolver(Interpreter interpreter)
+        {
             this.interpreter = interpreter;
         }
 
-        private enum FunctionType {
+        private enum FunctionType
+        {
             NONE,
-            FUNCTION
+            FUNCTION,
+            INITIALIZER,
+            METHOD
         }
+
+        private enum ClassType
+        {
+            NONE,
+            CLASS
+        }
+
+        private ClassType currentClass = ClassType.NONE;
 
         public void Resolve(List<Stmt<Void>> statements)
         {
-            foreach(var stmt in statements) {
+            foreach (var stmt in statements)
+            {
                 Resolve(stmt);
             }
         }
 
-        public void Resolve(Stmt<Void> stmt) {
+        public void Resolve(Stmt<Void> stmt)
+        {
             stmt.Accept(this);
         }
 
-        public void Resolve(Expr<object> expr) {
+        public void Resolve(Expr<object> expr)
+        {
             expr.Accept(this);
         }
 
-        private void ResolveFunction(Stmt<Void>.Function function, FunctionType type) {
+        private void ResolveFunction(Stmt<Void>.Function function, FunctionType type)
+        {
             FunctionType enclosingType = currentFunction;
             currentFunction = type;
-            
+
             BeginScope();
-            foreach(Token param in function.parameters) {
+            foreach (Token param in function.parameters)
+            {
                 Declare(param);
                 Define(param);
             }
@@ -46,34 +65,42 @@ namespace crafting_interpreters {
             currentFunction = enclosingType;
         }
 
-        private void BeginScope() {
+        private void BeginScope()
+        {
             scopes.Push(new Dictionary<string, bool>());
         }
 
-        private void EndScope() {
+        private void EndScope()
+        {
             scopes.Pop();
         }
 
-        private void Declare(Token name) {
-            if(scopes.Count == 0) return;
+        private void Declare(Token name)
+        {
+            if (scopes.Count == 0) return;
 
             var scope = scopes.Peek();
-            if(scope.ContainsKey(name.lexeme)) {
+            if (scope.ContainsKey(name.lexeme))
+            {
                 Lox.Error(name, "Variable with this name already declared in this scope.");
             }
 
             scope.Add(name.lexeme, false);
         }
 
-        private void Define(Token name) {
-            if(scopes.Count == 0) return;
+        private void Define(Token name)
+        {
+            if (scopes.Count == 0) return;
             scopes.Peek()[name.lexeme] = true;
         }
 
-        private void ResolveLocal(Expr<object> expr, Token name) {
+        private void ResolveLocal(Expr<object> expr, Token name)
+        {
             // Took way too long too figure out that C# stack indexes work the opposite way of Java.
-            for(int i = 0; i < scopes.Count; i++) {
-                if(scopes.ElementAt(i).ContainsKey(name.lexeme)) {
+            for (int i = 0; i < scopes.Count; i++)
+            {
+                if (scopes.ElementAt(i).ContainsKey(name.lexeme))
+                {
                     interpreter.Resolve(expr, i);
                     return;
                 }
@@ -92,7 +119,8 @@ namespace crafting_interpreters {
         public Void VisitVarStmt(Stmt<Void>.Var stmt)
         {
             Declare(stmt.name);
-            if(stmt.initializer != null) {
+            if (stmt.initializer != null)
+            {
                 Resolve(stmt.initializer);
             }
             Define(stmt.name);
@@ -101,11 +129,12 @@ namespace crafting_interpreters {
 
         public object VisitVariableExpr(Expr<object>.Variable expr)
         {
-            if(scopes.Count != 0) 
-            { 
+            if (scopes.Count != 0)
+            {
                 bool initialized;
                 var exists = scopes.Peek().TryGetValue(expr.name.lexeme, out initialized);
-                if(exists && initialized == false) {
+                if (exists && initialized == false)
+                {
                     Lox.Error(expr.name, "Cannot read local variable in its own initializer.");
                 }
             }
@@ -140,7 +169,7 @@ namespace crafting_interpreters {
         {
             Resolve(stmt.condition);
             Resolve(stmt.thenBranch);
-            if(stmt.elseBranch != null) Resolve(stmt.elseBranch);
+            if (stmt.elseBranch != null) Resolve(stmt.elseBranch);
             return null;
         }
 
@@ -152,11 +181,18 @@ namespace crafting_interpreters {
 
         public Void VisitReturnStmt(Stmt<Void>.Return stmt)
         {
-            if(currentFunction == FunctionType.NONE) {
+            if (currentFunction == FunctionType.NONE)
+            {
                 Lox.Error(stmt.keyword, "Cannot return from top-level code.");
             }
 
-            if(stmt.value != null) {
+            if (currentFunction == FunctionType.INITIALIZER)
+            {
+                Lox.Error(stmt.keyword, "Cannot return value from an initializer.");
+            }
+
+            if (stmt.value != null)
+            {
                 Resolve(stmt.value);
             }
 
@@ -180,7 +216,8 @@ namespace crafting_interpreters {
         public object VisitCallExpr(Expr<object>.Call expr)
         {
             Resolve(expr.callee);
-            foreach(var argument in expr.arguments) {
+            foreach (var argument in expr.arguments)
+            {
                 Resolve(argument);
             }
 
@@ -208,6 +245,56 @@ namespace crafting_interpreters {
         public object VisitUnaryExpr(Expr<object>.Unary expr)
         {
             Resolve(expr.right);
+            return null;
+        }
+
+        public Void VisitClassStmt(Stmt<Void>.Class stmt)
+        {
+            var enclosingClass = currentClass;
+            currentClass = ClassType.CLASS;
+
+            Declare(stmt.name);
+            Define(stmt.name);
+
+            BeginScope();
+            scopes.Peek().Add("this", true);
+
+            foreach (var method in stmt.methods)
+            {
+                var declaration = FunctionType.METHOD;
+                if (method.name.lexeme == "init")
+                {
+                    declaration = FunctionType.INITIALIZER;
+                }
+                ResolveFunction(method, declaration);
+            }
+            EndScope();
+
+            currentClass = enclosingClass;
+            return null;
+        }
+
+        public object VisitGetExpr(Expr<object>.Get expr)
+        {
+            Resolve(expr.obj);
+            return null;
+        }
+
+        public object VisitSetExpr(Expr<object>.Set expr)
+        {
+            Resolve(expr.value);
+            Resolve(expr.obj);
+            return null;
+        }
+
+        public object VisitThisExpr(Expr<object>.This expr)
+        {
+            if (currentClass == ClassType.NONE)
+            {
+                Lox.Error(expr.keyword, "Cannot use 'this' outside of class");
+                return null;
+            }
+            ResolveLocal(expr, expr.keyword);
             return null;
         }
     }

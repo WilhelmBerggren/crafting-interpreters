@@ -4,7 +4,8 @@ using System.Collections.Generic;
 namespace crafting_interpreters
 {
     // void is only a return type in C#, so I brought my own. It does nothing.
-    public sealed class Void {
+    public sealed class Void
+    {
         private Void() { }
     }
 
@@ -13,40 +14,51 @@ namespace crafting_interpreters
         public Env globals = new Env();
         private Env env;
         private Dictionary<Expr<object>, int> locals = new Dictionary<Expr<object>, int>();
-        public Interpreter() {
+        public Interpreter()
+        {
             this.env = globals;
             globals.Define("clock", new Clock());
         }
 
-        public void Interpret(List<Stmt<Void>> statements) {
-            try {
-                foreach(var statement in statements) {
+        public void Interpret(List<Stmt<Void>> statements)
+        {
+            try
+            {
+                foreach (var statement in statements)
+                {
                     Execute(statement);
                 }
             }
-            catch(RuntimeError error) {
+            catch (RuntimeError error)
+            {
                 Lox.RuntimeError(error);
             }
         }
 
-        private void Execute(Stmt<Void> stmt) {
+        private void Execute(Stmt<Void> stmt)
+        {
             stmt.Accept(this);
         }
 
-        public void Resolve(Expr<object> expr, int depth) {
+        public void Resolve(Expr<object> expr, int depth)
+        {
             locals.Add(expr, depth);
         }
 
-        public void ExecuteBlock(List<Stmt<Void>> statements, Env env) {
+        public void ExecuteBlock(List<Stmt<Void>> statements, Env env)
+        {
             Env previous = this.env;
-            try {
+            try
+            {
                 this.env = env;
 
-                foreach(var statement in statements) {
+                foreach (var statement in statements)
+                {
                     Execute(statement);
                 }
             }
-            finally {
+            finally
+            {
                 this.env = previous;
             }
         }
@@ -75,7 +87,7 @@ namespace crafting_interpreters
                 case TokenType.BANG:
                     return !IsTruthy(right);
                 case TokenType.MINUS:
-                CheckNumberOperand(expr.op, right);
+                    CheckNumberOperand(expr.op, right);
                     return -(double)right;
             }
 
@@ -155,12 +167,15 @@ namespace crafting_interpreters
             return left.Equals(right);
         }
 
-        private string Stringify(Object obj) {
-            if(obj == null) return "nil";
+        private string Stringify(Object obj)
+        {
+            if (obj == null) return "nil";
 
-            if(typeof(Double).IsInstanceOfType(obj)) {
+            if (typeof(Double).IsInstanceOfType(obj))
+            {
                 var text = obj.ToString();
-                if(text.EndsWith(".0")) {
+                if (text.EndsWith(".0"))
+                {
                     text = text.Substring(0, text.Length - 2);
                 }
                 return text;
@@ -185,7 +200,8 @@ namespace crafting_interpreters
         public Void VisitVarStmt(Stmt<Void>.Var stmt)
         {
             object value = null;
-            if(stmt.initializer != null) {
+            if (stmt.initializer != null)
+            {
                 value = Evaluate(stmt.initializer);
             }
 
@@ -193,22 +209,27 @@ namespace crafting_interpreters
             return null;
         }
 
-        public Void VisitWhileStmt(Stmt<Void>.While stmt) {
-            while(IsTruthy(Evaluate(stmt.condition))) {
+        public Void VisitWhileStmt(Stmt<Void>.While stmt)
+        {
+            while (IsTruthy(Evaluate(stmt.condition)))
+            {
                 Execute(stmt.body);
             }
 
             return null;
         }
 
-        public object VisitAssignExpr(Expr<object>.Assign expr) {
+        public object VisitAssignExpr(Expr<object>.Assign expr)
+        {
             object value = Evaluate(expr.value);
 
-            if(locals.ContainsKey(expr)) {
+            if (locals.ContainsKey(expr))
+            {
                 int distance = locals[expr];
                 env.AssignAt(distance, expr.name, value);
             }
-            else {
+            else
+            {
                 globals.Assign(expr.name, value);
             }
             return value;
@@ -219,12 +240,15 @@ namespace crafting_interpreters
             return LookUpVariable(expr.name, expr);
         }
 
-        private object LookUpVariable(Token name, Expr<object> expr) {
-            if(locals.ContainsKey(expr)) {
+        private object LookUpVariable(Token name, Expr<object> expr)
+        {
+            if (locals.ContainsKey(expr))
+            {
                 int distance = locals[expr];
                 return env.GetAt(distance, name.lexeme);
             }
-            else {
+            else
+            {
                 return globals.Get(name);
             }
         }
@@ -237,12 +261,15 @@ namespace crafting_interpreters
 
         public Void VisitIfStmt(Stmt<Void>.If stmt)
         {
-            if(IsTruthy(Evaluate(stmt.condition))) {
+            if (IsTruthy(Evaluate(stmt.condition)))
+            {
                 Execute(stmt.thenBranch);
-            } else if(stmt.elseBranch != null) {
+            }
+            else if (stmt.elseBranch != null)
+            {
                 Execute(stmt.elseBranch);
             }
-            
+
             return null;
         }
 
@@ -250,11 +277,13 @@ namespace crafting_interpreters
         {
             object left = Evaluate(expr.left);
 
-            if(expr.op.type == TokenType.OR) {
-                if(IsTruthy(left)) return left;
+            if (expr.op.type == TokenType.OR)
+            {
+                if (IsTruthy(left)) return left;
             }
-            else {
-                if(!IsTruthy(left)) return left;
+            else
+            {
+                if (!IsTruthy(left)) return left;
             }
 
             return Evaluate(expr.right);
@@ -265,16 +294,19 @@ namespace crafting_interpreters
             Object callee = Evaluate(expr.callee);
 
             var args = new List<object>();
-            foreach(Expr<object> arg in expr.arguments) {
+            foreach (Expr<object> arg in expr.arguments)
+            {
                 args.Add(Evaluate(arg));
             }
 
-            if(!(typeof(ILoxCallable).IsInstanceOfType(callee))) {
+            if (!(typeof(ILoxCallable).IsInstanceOfType(callee)))
+            {
                 throw new RuntimeError(expr.paren, "Can only call functions and classes.");
             }
 
             ILoxCallable function = (ILoxCallable)callee;
-            if(args.Count != function.Arity()) {
+            if (args.Count != function.Arity())
+            {
                 throw new RuntimeError(expr.paren, $"Expected {function.Arity()} arguments but got {args.Count}.");
             }
 
@@ -283,7 +315,7 @@ namespace crafting_interpreters
 
         public Void VisitFunctionStmt(Stmt<Void>.Function stmt)
         {
-            var function = new LoxFunction(stmt, env);
+            var function = new LoxFunction(stmt, env, false);
             env.Define(stmt.name.lexeme, function);
             return null;
         }
@@ -291,9 +323,56 @@ namespace crafting_interpreters
         public Void VisitReturnStmt(Stmt<Void>.Return stmt)
         {
             object value = null;
-            if(stmt.value != null) value = Evaluate(stmt.value);
+            if (stmt.value != null) value = Evaluate(stmt.value);
 
             throw new Return(value);
+        }
+
+        public Void VisitClassStmt(Stmt<Void>.Class stmt)
+        {
+            env.Define(stmt.name.lexeme, null);
+
+            var methods = new Dictionary<string, LoxFunction>();
+            foreach (var method in stmt.methods)
+            {
+                var function = new LoxFunction(method, env, method.name.lexeme == "init");
+                methods.Add(method.name.lexeme, function);
+            }
+
+            LoxClass klass = new LoxClass(stmt.name.lexeme, methods);
+            env.Assign(stmt.name, klass);
+            return null;
+        }
+
+        public object VisitGetExpr(Expr<object>.Get expr)
+        {
+            object obj = Evaluate(expr.obj);
+            if (typeof(LoxInstance).IsInstanceOfType(obj))
+            {
+                return ((LoxInstance)obj).Get(expr.name);
+            }
+
+            throw new RuntimeError(expr.name, "Only instances have properties.");
+        }
+
+        public object VisitSetExpr(Expr<object>.Set expr)
+        {
+            object obj = Evaluate(expr.obj);
+
+            if (!typeof(LoxInstance).IsInstanceOfType(obj))
+            {
+                throw new RuntimeError(expr.name, "Only instances have fields.");
+            }
+
+            object value = Evaluate(expr.value);
+            ((LoxInstance)obj).Set(expr.name, value);
+
+            return value;
+        }
+
+        public object VisitThisExpr(Expr<object>.This expr)
+        {
+            return LookUpVariable(expr.keyword, expr);
         }
     }
 }
