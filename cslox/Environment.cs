@@ -3,8 +3,8 @@ using System.Collections.Generic;
 
 namespace crafting_interpreters {
     public class Env {
-        private Env enclosing { get; }
-        private Dictionary<string, object> values = new Dictionary<string, object>();
+        private readonly Env enclosing;
+        private readonly Dictionary<string, object> values = new Dictionary<string, object>();
 
         public Env() {
             enclosing = null;
@@ -18,19 +18,32 @@ namespace crafting_interpreters {
             values.Add(name, value);
         }
 
+        public Env Ancestor(int distance) {
+            Env env = this;
+            for(int i = 0; i < distance; i++) {
+                env = env.enclosing;
+            }
+
+            return env;
+        }
+
+        public object GetAt(int distance, string name) {
+            return Ancestor(distance).values[name];
+        }
+
+        public void AssignAt(int distance, Token name, object value) {
+            Ancestor(distance).values[name.lexeme] = value;
+        }
+
         public object Get(Token name) {
-            object res = null;
             if(values.ContainsKey(name.lexeme)) {
-                values.TryGetValue(name.lexeme, out res);
-                if(res == null) {
-                    throw new RuntimeError(name, $"Undefined variable '{name.lexeme}'.");
-                }
-                return res;
+                return values[name.lexeme];
             }
             if(enclosing != null) {
                 return enclosing.Get(name);
             }
-            return null;
+            
+            throw new RuntimeError(name, $"Undefined variable '{name.lexeme}'.");
         }
 
         public void Assign(Token name, object value) {

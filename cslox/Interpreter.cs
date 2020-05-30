@@ -12,6 +12,7 @@ namespace crafting_interpreters
     {
         public Env globals = new Env();
         private Env env;
+        private Dictionary<Expr<object>, int> locals = new Dictionary<Expr<object>, int>();
         public Interpreter() {
             this.env = globals;
             globals.Define("clock", new Clock());
@@ -30,6 +31,10 @@ namespace crafting_interpreters
 
         private void Execute(Stmt<Void> stmt) {
             stmt.Accept(this);
+        }
+
+        public void Resolve(Expr<object> expr, int depth) {
+            locals.Add(expr, depth);
         }
 
         public void ExecuteBlock(List<Stmt<Void>> statements, Env env) {
@@ -199,13 +204,29 @@ namespace crafting_interpreters
         public object VisitAssignExpr(Expr<object>.Assign expr) {
             object value = Evaluate(expr.value);
 
-            env.Assign(expr.name, value);
+            if(locals.ContainsKey(expr)) {
+                int distance = locals[expr];
+                env.AssignAt(distance, expr.name, value);
+            }
+            else {
+                globals.Assign(expr.name, value);
+            }
             return value;
         }
 
         public object VisitVariableExpr(Expr<object>.Variable expr)
         {
-            return env.Get(expr.name);
+            return LookUpVariable(expr.name, expr);
+        }
+
+        private object LookUpVariable(Token name, Expr<object> expr) {
+            if(locals.ContainsKey(expr)) {
+                int distance = locals[expr];
+                return env.GetAt(distance, name.lexeme);
+            }
+            else {
+                return globals.Get(name);
+            }
         }
 
         public Void VisitBlockStmt(Stmt<Void>.Block stmt)

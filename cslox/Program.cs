@@ -18,7 +18,6 @@ namespace crafting_interpreters
             }
             else if (args.Length == 1)
             {
-                Console.WriteLine($"Running file: {args[0]}");
                 RunFile(args[0]);
                 if(hadError) Environment.Exit(65);
                 if(hadRuntimeError) Environment.Exit(70);
@@ -60,12 +59,16 @@ namespace crafting_interpreters
             var scanner = new Scanner(source);
             List<Token> tokens = scanner.ScanTokens();
             Parser parser = new Parser(tokens);
-            List<Stmt<Void>> expr = parser.Parse();
+            List<Stmt<Void>> statements = parser.Parse();
 
             if (hadError) return;
 
-            interpreter.Interpret(expr);
-            //Console.WriteLine(new AstPrinter().Print(expr));
+            var resolver = new Resolver(interpreter);
+            resolver.Resolve(statements);
+
+            if (hadError) return;
+
+            interpreter.Interpret(statements);
         }
 
         public static void Error(int line, string message)
