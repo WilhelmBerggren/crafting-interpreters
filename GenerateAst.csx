@@ -68,28 +68,29 @@ static void DefineAst(string baseName, string generic, string[] types)
     WriteLine("}");
 }
 
-// DefineAst("Expr", "R", new[] {
-//     "Assign   : Token name, Expr<R> value",
-//     "Binary   : Expr<R> left, Token op, Expr<R> right",
-//     "Call     : Expr<R> callee, Token paren, List<Expr<R>> arguments",
-//     "Get      : Expr<R> obj, Token name",
-//     "Grouping : Expr<R> expression",
-//     "Literal  : Object value",
-//     "Logical  : Expr<R> left, Token op, Expr<R> right",
-//     "Set      : Expr<R> obj, Token name, Expr<R> value",
-//     "This     : Token keyword",
-//     "Unary    : Token op, Expr<R> right",
-//     "Variable : Token name"
-// });
-
-DefineAst("Stmt", "R", new[] {
-    "Block      : List<Stmt<R>> statements",
-    "Class      : Token name, List<Stmt<R>.Function> methods",
-    "Expression : Expr<object> expression",
-    "Function   : Token name, List<Token> parameters, List<Stmt<R>> body",
-    "If         : Expr<object> condition, Stmt<R> thenBranch, Stmt<R> elseBranch",
-    "Print      : Expr<object> expression",
-    "Return     : Token keyword, Expr<object> value",
-    "Var        : Token name, Expr<object> initializer",
-    "While      : Expr<object> condition, Stmt<R> body"
+DefineAst("Expr", "R", new[] {
+    "Assign   : Token name, Expr<R> value",
+    "Binary   : Expr<R> left, Token op, Expr<R> right",
+    "Call     : Expr<R> callee, Token paren, List<Expr<R>> arguments",
+    "Get      : Expr<R> obj, Token name",
+    "Grouping : Expr<R> expression",
+    "Literal  : Object value",
+    "Logical  : Expr<R> left, Token op, Expr<R> right",
+    "Set      : Expr<R> obj, Token name, Expr<R> value",
+    "Super    : Token keyword, Token method",
+    "This     : Token keyword",
+    "Unary    : Token op, Expr<R> right",
+    "Variable : Token name"
 });
+
+// DefineAst("Stmt", "R", new[] {
+//     "Block      : List<Stmt<R>> statements",
+//     "Class      : Token name, Expr<object>.Variable superclass, List<Stmt<R>.Function> methods",
+//     "Expression : Expr<object> expression",
+//     "Function   : Token name, List<Token> parameters, List<Stmt<R>> body",
+//     "If         : Expr<object> condition, Stmt<R> thenBranch, Stmt<R> elseBranch",
+//     "Print      : Expr<object> expression",
+//     "Return     : Token keyword, Expr<object> value",
+//     "Var        : Token name, Expr<object> initializer",
+//     "While      : Expr<object> condition, Stmt<R> body"
+// });

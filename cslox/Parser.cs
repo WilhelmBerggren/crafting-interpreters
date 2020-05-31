@@ -263,6 +263,12 @@ namespace crafting_interpreters
         private Stmt<Void>.Class ClassDeclaration()
         {
             Token name = Consume(TokenType.IDENTIFIER, "Expect class name.");
+            Expr<object>.Variable superclass = null;
+            if(Match(TokenType.LESS)) {
+                Consume(TokenType.IDENTIFIER, "Expect superclass name.");
+                superclass = new Expr<object>.Variable(Previous());
+            }
+
             Consume(TokenType.LEFT_BRACE, "Expect '{' before class body.");
 
             var methods = new List<Stmt<Void>.Function>();
@@ -273,7 +279,7 @@ namespace crafting_interpreters
 
             Consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.");
 
-            return new Stmt<Void>.Class(name, methods);
+            return new Stmt<Void>.Class(name, superclass, methods);
         }
 
         private List<Stmt<Void>> Block()
@@ -493,6 +499,13 @@ namespace crafting_interpreters
             if (Match(TokenType.NUMBER, TokenType.STRING))
             {
                 return new Expr<object>.Literal(Previous().literal);
+            }
+
+            if(Match(TokenType.SUPER)) {
+                Token keyword = Previous();
+                Consume(TokenType.DOT, "Expect '.' after 'super'.");
+                Token method = Consume(TokenType.IDENTIFIER, "Expect superclass method name.");
+                return new Expr<object>.Super(keyword, method);
             }
 
             if (Match(TokenType.THIS))

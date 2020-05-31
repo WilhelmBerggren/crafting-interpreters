@@ -26,7 +26,8 @@ namespace crafting_interpreters
         private enum ClassType
         {
             NONE,
-            CLASS
+            CLASS,
+            SUBCLASS
         }
 
         private ClassType currentClass = ClassType.NONE;
@@ -256,6 +257,15 @@ namespace crafting_interpreters
             Declare(stmt.name);
             Define(stmt.name);
 
+            if(stmt.superclass != null && stmt.name.lexeme == stmt.superclass.name.lexeme) {
+                Lox.Error(stmt.superclass.name, "A class cannot inherit from itself.");
+            }
+
+            if(stmt.superclass != null) {
+                BeginScope();
+                scopes.Peek().Add("super", true);
+            }
+
             BeginScope();
             scopes.Peek().Add("this", true);
 
@@ -269,6 +279,10 @@ namespace crafting_interpreters
                 ResolveFunction(method, declaration);
             }
             EndScope();
+
+            if(stmt.superclass != null) {
+                EndScope();
+            }
 
             currentClass = enclosingClass;
             return null;
@@ -294,6 +308,18 @@ namespace crafting_interpreters
                 Lox.Error(expr.keyword, "Cannot use 'this' outside of class");
                 return null;
             }
+            ResolveLocal(expr, expr.keyword);
+            return null;
+        }
+
+        public object VisitSuperExpr(Expr<object>.Super expr)
+        {
+            if(currentClass == ClassType.NONE) {
+                Lox.Error(expr.keyword, "Cannot use 'super' outside of a class.");
+            } else if(currentClass != ClassType.SUBCLASS) {
+                Lox.Error(expr.keyword, "Cannot use 'super' in a class with no superclass.");
+            }
+            
             ResolveLocal(expr, expr.keyword);
             return null;
         }

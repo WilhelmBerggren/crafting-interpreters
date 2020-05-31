@@ -75,5 +75,10 @@ namespace crafting_interpreters
         {
             throw new NotImplementedException();
         }
+
+        public string VisitSuperExpr(Expr<string>.Super expr)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

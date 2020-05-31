@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 
-namespace crafting_interpreters
-{
+namespace crafting_interpreters {
 
-    public interface StmtVisitor<R>
-    {
+    public interface StmtVisitor<R> {
         R VisitBlockStmt(Stmt<R>.Block stmt);
         R VisitClassStmt(Stmt<R>.Class stmt);
         R VisitExpressionStmt(Stmt<R>.Expression stmt);
@@ -17,60 +15,58 @@ namespace crafting_interpreters
         R VisitWhileStmt(Stmt<R>.While stmt);
     }
 
-    public abstract class Stmt<R>
-    {
+    public abstract class Stmt<R> {
         public abstract R Accept(StmtVisitor<R> visitor);
 
         public class Block : Stmt<R>
         {
-            public Block(List<Stmt<R>> statements)
+           public Block (List<Stmt<R>> statements)
             {
                 this.statements = statements;
             }
 
             public List<Stmt<R>> statements { get; }
 
-            public override R Accept(StmtVisitor<R> visitor)
-            {
+            public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitBlockStmt(this);
             }
         }
 
         public class Class : Stmt<R>
         {
-            public Class(Token name, List<Stmt<R>.Function> methods)
+           public Class (Token name, Expr<object>.Variable superclass, List<Stmt<R>.Function> methods)
             {
                 this.name = name;
+                this.superclass = superclass;
                 this.methods = methods;
             }
 
             public Token name { get; }
+            public Expr<object>.Variable superclass { get; }
             public List<Stmt<R>.Function> methods { get; }
 
-            public override R Accept(StmtVisitor<R> visitor)
-            {
+            public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitClassStmt(this);
             }
         }
 
         public class Expression : Stmt<R>
         {
-            public Expression(Expr<object> expression)
+           public Expression (Expr<object> expression)
             {
                 this.expression = expression;
             }
 
             public Expr<object> expression { get; }
 
-            public override R Accept(StmtVisitor<R> visitor)
-            {
+            public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitExpressionStmt(this);
             }
         }
 
         public class Function : Stmt<R>
         {
-            public Function(Token name, List<Token> parameters, List<Stmt<R>> body)
+           public Function (Token name, List<Token> parameters, List<Stmt<R>> body)
             {
                 this.name = name;
                 this.parameters = parameters;
@@ -81,15 +77,14 @@ namespace crafting_interpreters
             public List<Token> parameters { get; }
             public List<Stmt<R>> body { get; }
 
-            public override R Accept(StmtVisitor<R> visitor)
-            {
+            public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitFunctionStmt(this);
             }
         }
 
         public class If : Stmt<R>
         {
-            public If(Expr<object> condition, Stmt<R> thenBranch, Stmt<R> elseBranch)
+           public If (Expr<object> condition, Stmt<R> thenBranch, Stmt<R> elseBranch)
             {
                 this.condition = condition;
                 this.thenBranch = thenBranch;
@@ -100,30 +95,28 @@ namespace crafting_interpreters
             public Stmt<R> thenBranch { get; }
             public Stmt<R> elseBranch { get; }
 
-            public override R Accept(StmtVisitor<R> visitor)
-            {
+            public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitIfStmt(this);
             }
         }
 
         public class Print : Stmt<R>
         {
-            public Print(Expr<object> expression)
+           public Print (Expr<object> expression)
             {
                 this.expression = expression;
             }
 
             public Expr<object> expression { get; }
 
-            public override R Accept(StmtVisitor<R> visitor)
-            {
+            public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitPrintStmt(this);
             }
         }
 
         public class Return : Stmt<R>
         {
-            public Return(Token keyword, Expr<object> value)
+           public Return (Token keyword, Expr<object> value)
             {
                 this.keyword = keyword;
                 this.value = value;
@@ -132,15 +125,14 @@ namespace crafting_interpreters
             public Token keyword { get; }
             public Expr<object> value { get; }
 
-            public override R Accept(StmtVisitor<R> visitor)
-            {
+            public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitReturnStmt(this);
             }
         }
 
         public class Var : Stmt<R>
         {
-            public Var(Token name, Expr<object> initializer)
+           public Var (Token name, Expr<object> initializer)
             {
                 this.name = name;
                 this.initializer = initializer;
@@ -149,15 +141,14 @@ namespace crafting_interpreters
             public Token name { get; }
             public Expr<object> initializer { get; }
 
-            public override R Accept(StmtVisitor<R> visitor)
-            {
+            public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitVarStmt(this);
             }
         }
 
         public class While : Stmt<R>
         {
-            public While(Expr<object> condition, Stmt<R> body)
+           public While (Expr<object> condition, Stmt<R> body)
             {
                 this.condition = condition;
                 this.body = body;
@@ -166,8 +157,7 @@ namespace crafting_interpreters
             public Expr<object> condition { get; }
             public Stmt<R> body { get; }
 
-            public override R Accept(StmtVisitor<R> visitor)
-            {
+            public override R Accept(StmtVisitor<R> visitor) {
                 return visitor.VisitWhileStmt(this);
             }
         }

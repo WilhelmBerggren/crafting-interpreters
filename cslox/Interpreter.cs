@@ -330,7 +330,19 @@ namespace crafting_interpreters
 
         public Void VisitClassStmt(Stmt<Void>.Class stmt)
         {
+            object superclass = null;
+            if(stmt.superclass != null) {
+                superclass = Evaluate(stmt.superclass);
+                if(!typeof(LoxClass).IsInstanceOfType(superclass)) {
+                    throw new RuntimeError(stmt.superclass.name, "Superclass must be a class.");
+                }
+            }
             env.Define(stmt.name.lexeme, null);
+
+            if(stmt.superclass != null) {
+                env = new Env(env);
+                env.Define("super", superclass);
+            }
 
             var methods = new Dictionary<string, LoxFunction>();
             foreach (var method in stmt.methods)
@@ -339,7 +351,11 @@ namespace crafting_interpreters
                 methods.Add(method.name.lexeme, function);
             }
 
-            LoxClass klass = new LoxClass(stmt.name.lexeme, methods);
+            LoxClass klass = new LoxClass(stmt.name.lexeme, (LoxClass)superclass, methods);
+
+            if(superclass != null) {
+                env = env.enclosing;
+            }
             env.Assign(stmt.name, klass);
             return null;
         }
@@ -373,6 +389,22 @@ namespace crafting_interpreters
         public object VisitThisExpr(Expr<object>.This expr)
         {
             return LookUpVariable(expr.keyword, expr);
+        }
+
+        public object VisitSuperExpr(Expr<object>.Super expr)
+        {
+            int distance = locals[expr];
+            var superclass = (LoxClass)env.GetAt(distance, "super");
+
+            var obj = (LoxInstance)env.GetAt(distance - 1, "this");
+
+            var method = superclass.FindMethod(expr.method.lexeme);
+
+            if(method == null) {
+                throw new RuntimeError(expr.method, $"Undefined property '{expr.method.lexeme}'.");
+            }
+
+            return method.Bind(obj);
         }
     }
 }
